@@ -4,20 +4,20 @@ ruleset:
   - security_unencrypted_file_storage
 
 llm_integration:
-  enabled: true  # Включено для бесплатных моделей
+  enabled: true
   # Выбор провайдера: 'ollama' (локально, бесплатно) или 'deepseek' (дешевый API)
-  provider: "ollama" 
+  provider: "deepseek" 
   
   # Настройки для Ollama (локальный запуск)
   ollama:
-    model_name: "deepseek-coder:6.7b" # Или любая другая модель: llama3, mistral, codellama
+    model_name: "deepseek-coder:6.7b"
     base_url: "http://localhost:11434"
-    timeout: 120 # Локальные модели могут работать медленнее
+    timeout: 120
 
-  # Настройки для DeepSeek API (если решите использовать облако)
+  # Настройки для DeepSeek API
   deepseek:
-    api_key: "YOUR_DEEPSEEK_API_KEY" # Вставьте ваш ключ здесь
-    model_name: "deepseek-coder"
+    api_key: "sk-7f3b8a9c2d1e4f5g6h7i8j9k0l1m2n3o" # Замените на ваш реальный ключ DeepSeek
+    model_name: "deepseek-chat"
     base_url: "https://api.deepseek.com"
     
   # Порог уверенности (0.0 - 1.0). Если уверенность модели ниже, предупреждение помечается как "Low" или игнорируется.
