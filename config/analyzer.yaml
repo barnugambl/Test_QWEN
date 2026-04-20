@@ -1,0 +1,20 @@
+ruleset:
+  - security_plain_text_token
+  - security_insecure_logging
+  - security_unencrypted_file_storage
+
+llm_integration:
+  enabled: false  # Включим позже, когда подключим API
+  api_key: ""
+  model_name: "gpt-4-turbo"
+  confidence_threshold: 0.85
+
+sources_sinks:
+  sources: ["UITextField.text", "CLLocationManager.location"]
+  sinks: ["UserDefaults.standard.set", "FileManager.write", "print"]
+
+ignored_paths:
+  - "Pods/"
+  - "Carthage/"
+  - "build/"
+  - ".git/"
