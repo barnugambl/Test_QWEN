@@ -1,17 +1,17 @@
-  security_plain_text_token:
-    name: "Plain Text Token Storage"
-    regex: 'UserDefaults\.standard\.set\(\s*.*["\'](?:token|api_key|secret|password)["\']'
-    message: "MSTG-STORAGE-2: Avoid storing tokens/API keys in UserDefaults as plain text. Use Keychain."
-    severity: error
+security_plain_text_token:
+  name: "Plain Text Token Storage"
+  regex: "UserDefaults\\.standard\\.set\\(.*(?:token|api_key|secret|password)"
+  message: "MSTG-STORAGE-2: Avoid storing tokens/API keys in UserDefaults as plain text. Use Keychain."
+  severity: error
 
-  security_insecure_logging:
-    name: "Insecure Logging"
-    regex: '(?:print|NSLog|os_log)\(.*(?:password|token|secret|credit_card|ssn|location).*\)'
-    message: "MSTG-STORAGE-3/PRIVACY-1: Sensitive data may be exposed in system logs."
-    severity: warning
+security_insecure_logging:
+  name: "Insecure Logging"
+  regex: "(?:print|NSLog|os_log)\\(.*(?:password|token|secret|credit_card|ssn|location)"
+  message: "MSTG-STORAGE-3/PRIVACY-1: Sensitive data may be exposed in system logs."
+  severity: warning
 
-  security_unencrypted_file_storage:
-    name: "Unencrypted File Storage"
-    regex: 'FileManager\.default\.createFile\(atPath:.*contents:.*\)'
-    message: "MSTG-STORAGE-6: Ensure sensitive data is encrypted before writing to the file system."
-    severity: warning
+security_unencrypted_file_storage:
+  name: "Unencrypted File Storage"
+  regex: "FileManager\\.default\\.createFile\\(atPath:.*contents:"
+  message: "MSTG-STORAGE-6: Ensure sensitive data is encrypted before writing to the file system."
+  severity: warning
