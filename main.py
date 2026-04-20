@@ -2,7 +2,7 @@ import argparse
 import yaml
 import time
 from pathlib import Path
-from config import AnalyzerConfig
+from config import AnalyzerConfig, LLMConfig
 from scanner import run_swiftlint
 from llm_verifier import LLMVerifier
 from report_generator import ReportGenerator
@@ -13,6 +13,40 @@ console = Console()
 def load_config(config_path: str) -> AnalyzerConfig:
     with open(config_path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
+    
+    # Обработка новой структуры конфигурации LLM
+    llm_data = data.get('llm_integration', {})
+    
+    # Создаем LLMConfig с правильными полями
+    llm_config = LLMConfig(
+        enabled=llm_data.get('enabled', False),
+        provider=llm_data.get('provider', 'ollama'),
+        confidence_threshold=llm_data.get('confidence_threshold', 0.6)
+    )
+    
+    # Обрабатываем настройки для Ollama
+    if 'ollama' in llm_data:
+        ollama_cfg = llm_data['ollama']
+        llm_config.ollama_model_name = ollama_cfg.get('model_name')
+        llm_config.ollama_base_url = ollama_cfg.get('base_url')
+        llm_config.ollama_timeout = ollama_cfg.get('timeout')
+    
+    # Обрабатываем настройки для DeepSeek
+    if 'deepseek' in llm_data:
+        deepseek_cfg = llm_data['deepseek']
+        llm_config.api_key = deepseek_cfg.get('api_key')
+        llm_config.deepseek_model_name = deepseek_cfg.get('model_name')
+        llm_config.deepseek_base_url = deepseek_cfg.get('base_url')
+    
+    # Обратная совместимость со старым форматом
+    if 'api_key' in llm_data and llm_data['api_key']:
+        llm_config.api_key = llm_data['api_key']
+    if 'model_name' in llm_data and llm_data['model_name']:
+        llm_config.model_name = llm_data['model_name']
+    
+    # Обновляем данные конфигурации
+    data['llm_integration'] = llm_config
+    
     return AnalyzerConfig(**data)
 
 def main():

@@ -1,5 +1,1 @@
-```
-__pycache__/
-*.pyc
-reports/
-```
+Nothing should be ignored based on the provided file changes, as they only include source/config files (.md, .py, .yaml) without any build artifacts, dependencies, or temporary files.
