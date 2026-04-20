@@ -14,7 +14,7 @@ llm_integration:
     timeout: 120
 
   deepseek:
-    api_key: "sk-ВАШ_РЕАЛЬНЫЙ_КЛЮЧ_ЗДЕСЬ"
+    api_key: "sk-bb0ac39ecd92487bbdf1d89ddb214201" # Замените на ваш реальный ключ DeepSeek
     model_name: "deepseek-chat"
     base_url: "https://api.deepseek.com"
 
