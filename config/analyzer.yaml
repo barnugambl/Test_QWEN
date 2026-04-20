@@ -5,23 +5,18 @@ ruleset:
 
 llm_integration:
   enabled: true
-  # Выбор провайдера: 'ollama' (локально, бесплатно) или 'deepseek' (дешевый API)
-  provider: "deepseek" 
+  provider: "deepseek"
+  confidence_threshold: 0.6
   
-  # Настройки для Ollama (локальный запуск)
   ollama:
     model_name: "deepseek-coder:6.7b"
     base_url: "http://localhost:11434"
     timeout: 120
 
-  # Настройки для DeepSeek API
   deepseek:
     api_key: "sk-bb0ac39ecd92487bbdf1d89ddb214201" # Замените на ваш реальный ключ DeepSeek
     model_name: "deepseek-chat"
     base_url: "https://api.deepseek.com"
-    
-  # Порог уверенности (0.0 - 1.0). Если уверенность модели ниже, предупреждение помечается как "Low" или игнорируется.
-  confidence_threshold: 0.6
 
 sources_sinks:
   sources: 

@@ -1,7 +1,7 @@
 import json
 import requests
 from typing import Dict, Optional, List
-from config import LLMConfig
+from config import LLMConfig, DeepSeekConfig, OllamaConfig
 
 
 class LLMVerifier:
@@ -9,30 +9,50 @@ class LLMVerifier:
     
     def __init__(self, config: LLMConfig):
         self.config = config
-        self.enabled = config.enabled
-        self.provider = getattr(config, 'provider', 'ollama')  # 'ollama' или 'deepseek'
-        self.model_name = config.model_name
-        self.confidence_threshold = config.confidence_threshold
+        self.enabled = config.enabled if config else False
+        self.provider = (config.provider or "ollama").lower()
+        self.confidence_threshold = config.confidence_threshold if config else 0.6
         
-        # Настройки для разных провайдеров
+        # Инициализация настроек провайдеров
+        self.ollama_config: Optional[OllamaConfig] = config.ollama if config else None
+        self.deepseek_config: Optional[DeepSeekConfig] = config.deepseek if config else None
+        
+        # Настройки для разных провайдеров с fallback на старые поля
         if self.provider == 'ollama':
-            self.base_url = getattr(config, 'ollama_base_url', 'http://localhost:11434')
-            self.api_key = None  # Ollama не требует API ключа
-            self.timeout = getattr(config, 'ollama_timeout', 120)
+            if self.ollama_config:
+                self.model_name = self.ollama_config.model_name
+                self.base_url = self.ollama_config.base_url
+                self.timeout = self.ollama_config.timeout
+            else:
+                # Fallback на старые поля или дефолтные значения
+                self.model_name = config.ollama_model_name if hasattr(config, 'ollama_model_name') and config.ollama_model_name else "deepseek-coder:6.7b"
+                self.base_url = config.ollama_base_url if hasattr(config, 'ollama_base_url') and config.ollama_base_url else "http://localhost:11434"
+                self.timeout = config.ollama_timeout if hasattr(config, 'ollama_timeout') and config.ollama_timeout else 120
+            self.api_key = None
+            
         elif self.provider == 'deepseek':
-            self.base_url = getattr(config, 'deepseek_base_url', 'https://api.deepseek.com')
-            self.api_key = config.api_key
+            if self.deepseek_config:
+                self.model_name = self.deepseek_config.model_name
+                self.base_url = self.deepseek_config.base_url
+                self.api_key = self.deepseek_config.api_key
+            else:
+                # Fallback на старые поля или дефолтные значения
+                self.model_name = config.deepseek_model_name if hasattr(config, 'deepseek_model_name') and config.deepseek_model_name else "deepseek-chat"
+                self.base_url = config.deepseek_base_url if hasattr(config, 'deepseek_base_url') and config.deepseek_base_url else "https://api.deepseek.com"
+                self.api_key = config.api_key if hasattr(config, 'api_key') else None
             self.timeout = 60
+            
+            # Проверка наличия API ключа
+            if self.enabled and not self.api_key:
+                print(f"⚠️  DeepSeek enabled but API key is missing. LLM verification will be skipped.")
+                self.enabled = False
         else:
             print(f"⚠️  Unknown provider: {self.provider}, defaulting to ollama")
             self.provider = 'ollama'
-            self.base_url = 'http://localhost:11434'
+            self.model_name = "deepseek-coder:6.7b"
+            self.base_url = "http://localhost:11434"
             self.api_key = None
             self.timeout = 120
-        
-        if self.enabled and self.provider != 'ollama' and not self.api_key:
-            print(f"⚠️  {self.provider} enabled but API key is missing. LLM verification will be skipped.")
-            self.enabled = False
     
     def create_prompt(self, code_snippet: str, context: str, rule_id: str) -> str:
         """Создает структурированный промпт для LLM."""
@@ -170,11 +190,15 @@ class LLMVerifier:
                 "source": "error"
             }
         
+        # Кодируем payload в UTF-8 явно для избежания проблем с кодировкой
+        import json as json_module
+        json_payload = json_module.dumps(payload, ensure_ascii=False).encode('utf-8')
+        
         try:
             response = requests.post(
                 url,
                 headers=headers,
-                json=payload,
+                data=json_payload,
                 timeout=self.timeout
             )
             

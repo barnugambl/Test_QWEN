@@ -2,7 +2,7 @@ import argparse
 import yaml
 import time
 from pathlib import Path
-from config import AnalyzerConfig, LLMConfig
+from config import AnalyzerConfig, LLMConfig, OllamaConfig, DeepSeekConfig
 from scanner import run_swiftlint
 from llm_verifier import LLMVerifier
 from report_generator import ReportGenerator
@@ -17,32 +17,33 @@ def load_config(config_path: str) -> AnalyzerConfig:
     # Обработка новой структуры конфигурации LLM
     llm_data = data.get('llm_integration', {})
     
-    # Создаем LLMConfig с правильными полями
+    # Создаем конфигурации для провайдеров
+    ollama_config = None
+    if 'ollama' in llm_data:
+        ollama_cfg = llm_data['ollama']
+        ollama_config = OllamaConfig(
+            model_name=ollama_cfg.get('model_name', 'deepseek-coder:6.7b'),
+            base_url=ollama_cfg.get('base_url', 'http://localhost:11434'),
+            timeout=ollama_cfg.get('timeout', 120)
+        )
+    
+    deepseek_config = None
+    if 'deepseek' in llm_data:
+        deepseek_cfg = llm_data['deepseek']
+        deepseek_config = DeepSeekConfig(
+            api_key=deepseek_cfg.get('api_key'),
+            model_name=deepseek_cfg.get('model_name', 'deepseek-chat'),
+            base_url=deepseek_cfg.get('base_url', 'https://api.deepseek.com')
+        )
+    
+    # Создаем LLMConfig с новыми полями
     llm_config = LLMConfig(
         enabled=llm_data.get('enabled', False),
         provider=llm_data.get('provider', 'ollama'),
-        confidence_threshold=llm_data.get('confidence_threshold', 0.6)
+        confidence_threshold=llm_data.get('confidence_threshold', 0.6),
+        ollama=ollama_config,
+        deepseek=deepseek_config
     )
-    
-    # Обрабатываем настройки для Ollama
-    if 'ollama' in llm_data:
-        ollama_cfg = llm_data['ollama']
-        llm_config.ollama_model_name = ollama_cfg.get('model_name')
-        llm_config.ollama_base_url = ollama_cfg.get('base_url')
-        llm_config.ollama_timeout = ollama_cfg.get('timeout')
-    
-    # Обрабатываем настройки для DeepSeek
-    if 'deepseek' in llm_data:
-        deepseek_cfg = llm_data['deepseek']
-        llm_config.api_key = deepseek_cfg.get('api_key')
-        llm_config.deepseek_model_name = deepseek_cfg.get('model_name')
-        llm_config.deepseek_base_url = deepseek_cfg.get('base_url')
-    
-    # Обратная совместимость со старым форматом
-    if 'api_key' in llm_data and llm_data['api_key']:
-        llm_config.api_key = llm_data['api_key']
-    if 'model_name' in llm_data and llm_data['model_name']:
-        llm_config.model_name = llm_data['model_name']
     
     # Обновляем данные конфигурации
     data['llm_integration'] = llm_config
