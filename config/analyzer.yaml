@@ -4,17 +4,42 @@ ruleset:
   - security_unencrypted_file_storage
 
 llm_integration:
-  enabled: false  # Включим позже, когда подключим API
-  api_key: ""
-  model_name: "gpt-4-turbo"
-  confidence_threshold: 0.85
+  enabled: true  # Включено для бесплатных моделей
+  # Выбор провайдера: 'ollama' (локально, бесплатно) или 'deepseek' (дешевый API)
+  provider: "ollama" 
+  
+  # Настройки для Ollama (локальный запуск)
+  ollama:
+    model_name: "deepseek-coder:6.7b" # Или любая другая модель: llama3, mistral, codellama
+    base_url: "http://localhost:11434"
+    timeout: 120 # Локальные модели могут работать медленнее
+
+  # Настройки для DeepSeek API (если решите использовать облако)
+  deepseek:
+    api_key: "YOUR_DEEPSEEK_API_KEY" # Вставьте ваш ключ здесь
+    model_name: "deepseek-coder"
+    base_url: "https://api.deepseek.com"
+    
+  # Порог уверенности (0.0 - 1.0). Если уверенность модели ниже, предупреждение помечается как "Low" или игнорируется.
+  confidence_threshold: 0.6
 
 sources_sinks:
-  sources: ["UITextField.text", "CLLocationManager.location"]
-  sinks: ["UserDefaults.standard.set", "FileManager.write", "print"]
+  sources: 
+    - "UITextField.text"
+    - "CLLocationManager.location"
+    - "UIImagePickerController"
+    - "KeychainWrapper.standard"
+  sinks: 
+    - "UserDefaults.standard.set"
+    - "FileManager.write"
+    - "print"
+    - "NSLog"
+    - "URLSession.shared.dataTask"
 
 ignored_paths:
   - "Pods/"
   - "Carthage/"
   - "build/"
   - ".git/"
+  - "Tests/"
+  - "DerivedData/"

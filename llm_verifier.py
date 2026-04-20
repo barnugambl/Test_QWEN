@@ -5,17 +5,33 @@ from config import LLMConfig
 
 
 class LLMVerifier:
-    """Модуль верификации уязвимостей с использованием больших языковых моделей."""
+    """Модуль верификации уязвимостей с использованием больших языковых моделей (DeepSeek/Ollama)."""
     
     def __init__(self, config: LLMConfig):
         self.config = config
         self.enabled = config.enabled
-        self.api_key = config.api_key
+        self.provider = getattr(config, 'provider', 'ollama')  # 'ollama' или 'deepseek'
         self.model_name = config.model_name
         self.confidence_threshold = config.confidence_threshold
         
-        if self.enabled and not self.api_key:
-            print("⚠️  LLM enabled but API key is missing. LLM verification will be skipped.")
+        # Настройки для разных провайдеров
+        if self.provider == 'ollama':
+            self.base_url = getattr(config, 'ollama_base_url', 'http://localhost:11434')
+            self.api_key = None  # Ollama не требует API ключа
+            self.timeout = getattr(config, 'ollama_timeout', 120)
+        elif self.provider == 'deepseek':
+            self.base_url = getattr(config, 'deepseek_base_url', 'https://api.deepseek.com')
+            self.api_key = config.api_key
+            self.timeout = 60
+        else:
+            print(f"⚠️  Unknown provider: {self.provider}, defaulting to ollama")
+            self.provider = 'ollama'
+            self.base_url = 'http://localhost:11434'
+            self.api_key = None
+            self.timeout = 120
+        
+        if self.enabled and self.provider != 'ollama' and not self.api_key:
+            print(f"⚠️  {self.provider} enabled but API key is missing. LLM verification will be skipped.")
             self.enabled = False
     
     def create_prompt(self, code_snippet: str, context: str, rule_id: str) -> str:
@@ -88,7 +104,7 @@ class LLMVerifier:
     
     def verify_finding(self, code_snippet: str, context: str, rule_id: str) -> Dict:
         """
-        Верифицирует найденную уязвимость с помощью LLM.
+        Верифицирует найденную уязвимость с помощью LLM (DeepSeek или Ollama).
         
         Returns:
             Dict с результатами верификации:
@@ -108,37 +124,62 @@ class LLMVerifier:
         
         prompt = self.create_prompt(code_snippet, context, rule_id)
         
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
-        }
-        
-        payload = {
-            "model": self.model_name,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "Ты эксперт по безопасности iOS-приложений. Твоя задача - анализировать код Swift на наличие уязвимостей, связанных с обработкой пользовательских данных."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
+        if self.provider == 'ollama':
+            # Локальный запуск через Ollama API
+            payload = {
+                "model": self.model_name,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": 0.1,
+                    "num_predict": 500
                 }
-            ],
-            "temperature": 0.1,
-            "max_tokens": 500
-        }
+            }
+            
+            url = f"{self.base_url}/api/generate"
+            headers = {"Content-Type": "application/json"}
+            
+        elif self.provider == 'deepseek':
+            # DeepSeek API (совместим с OpenAI форматом)
+            payload = {
+                "model": self.model_name,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "Ты эксперт по безопасности iOS-приложений. Твоя задача - анализировать код Swift на наличие уязвимостей, связанных с обработкой пользовательских данных."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "temperature": 0.1,
+                "max_tokens": 500
+            }
+            
+            url = f"{self.base_url}/v1/chat/completions"
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.api_key}"
+            }
+        else:
+            return {
+                "verified": False,
+                "confidence": 0.0,
+                "reason": f"Unknown provider: {self.provider}",
+                "source": "error"
+            }
         
         try:
             response = requests.post(
-                "https://api.openai.com/v1/chat/completions",
+                url,
                 headers=headers,
                 json=payload,
-                timeout=30
+                timeout=self.timeout
             )
             
             if response.status_code != 200:
-                print(f"⚠️  LLM API error: {response.status_code} - {response.text}")
+                print(f"⚠️  {self.provider} API error: {response.status_code} - {response.text}")
                 return {
                     "verified": False,
                     "confidence": 0.0,
@@ -147,7 +188,14 @@ class LLMVerifier:
                 }
             
             response_data = response.json()
-            llm_output = response_data['choices'][0]['message']['content']
+            
+            # Извлечение ответа в зависимости от провайдера
+            if self.provider == 'ollama':
+                llm_output = response_data.get('response', '')
+            elif self.provider == 'deepseek':
+                llm_output = response_data['choices'][0]['message']['content']
+            else:
+                llm_output = ''
             
             parsed = self.parse_llm_response(llm_output)
             
