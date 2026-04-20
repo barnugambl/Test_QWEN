@@ -16,7 +16,7 @@ llm_integration:
 
   # Настройки для DeepSeek API
   deepseek:
-    api_key: "sk-7f3b8a9c2d1e4f5g6h7i8j9k0l1m2n3o" # Замените на ваш реальный ключ DeepSeek
+    api_key: "sk-bb0ac39ecd92487bbdf1d89ddb214201" # Замените на ваш реальный ключ DeepSeek
     model_name: "deepseek-chat"
     base_url: "https://api.deepseek.com"
     
